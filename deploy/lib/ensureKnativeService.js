@@ -12,7 +12,7 @@ const {
 
 function ensureKnativeService(funcName) {
   const { service } = this.serverless.service
-  const { username } = this.serverless.service.provider.docker
+  const { username, registry, imagePullSecrets } = this.serverless.service.provider.docker
 
   const ctx = new Context()
   const serving = new KnativeServing(undefined, ctx)
@@ -21,11 +21,11 @@ function ensureKnativeService(funcName) {
   const name = getFuncName(service, funcName)
 
   let registryAddress
-  let repository = getRepository(username, name)
-  let tag = getTag(this.serverless.instanceId)
+  const funcObject = this.serverless.service.getFunction(funcName)
+  let repository = funcObject.image || getRepository(username, name)
+  let tag = getTag(this.serverless.instanceId, funcObject.tagPrefix)
 
   // see if we're re-using an existing image or if we need to reach out to our Container Registry
-  const funcObject = this.serverless.service.getFunction(funcName)
   if (isContainerImageUrl(funcObject.handler)) {
     const image = funcObject.handler
     const firstSlash = image.indexOf('/')
@@ -42,8 +42,14 @@ function ensureKnativeService(funcName) {
     namespace
   }
 
-  if (registryAddress) {
-    Object.assign(inputs, { registryAddress })
+  if (registryAddress || registry) {
+    Object.assign(inputs, { registryAddress: registryAddress || registry })
+  }
+  if (funcObject.env) {
+    inputs.env = funcObject.env
+  }
+  if (imagePullSecrets) {
+    inputs.imagePullSecrets = imagePullSecrets
   }
 
   this.serverless.cli.log(`Deploying Knative service for function "${inputs.name}"...`)
