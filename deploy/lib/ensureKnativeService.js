@@ -45,6 +45,9 @@ function ensureKnativeService(funcName) {
   if (registryAddress || registry) {
     Object.assign(inputs, { registryAddress: registryAddress || registry })
   }
+  if (funcObject.env) {
+    inputs.env = funcObject.env
+  }
   if (imagePullSecrets) {
     inputs.imagePullSecrets = imagePullSecrets
   }
